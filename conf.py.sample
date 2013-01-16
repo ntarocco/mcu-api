@@ -1,0 +1,45 @@
+# Configuration file
+
+EMAIL_ENABLED = False
+
+# Params to access API
+
+API_URL = {
+    'hostname': 'cern-mcu1.cern.ch',
+    'url': '/RPC2',
+}
+
+API_AUTH = {
+    'authenticationUser': 'username',
+    'authenticationPassword': 'psw'
+}
+
+CONFERENCE_NAME = "CMS Centres Worldwide"
+
+PARTICIPANTS_TO_BE_CONNECTED = {
+    'p5': {
+        'displayName': 'CMS Control Room P5',
+        'address': '137.138.249.243',
+        'index': '1'
+    },
+    'meyrin': {
+        'displayName': 'CMS Centre Meyrin',
+        'address': '137.138.72.252',
+        'index': '2'
+    },
+    'fnal': {
+        'displayName': 'LHC@FNAL',
+        'address': '131.225.92.33',
+        'index': '3'
+    },
+    'desy': {
+        'displayName': 'CMS Centre desy',
+        'address': '131.169.118.76',
+        'index': '5'
+    },
+    'shifters': {
+        'displayName': 'CMS CSP Shifters',
+        'address': '361209*200468@137.138.248.228',
+        'index': '6'
+    }
+}
