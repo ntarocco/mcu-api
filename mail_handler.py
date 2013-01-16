@@ -6,10 +6,10 @@ import conf
 class ErrorMail():
     """Prepare and send emails"""
 
-    _server = "cernmx.cern.ch"
+    _server = conf.EMAIL_HOST
     _port = 25
-    _from = "service-avc-operation"
-    _to = ["service-avc-operation"]
+    _from = conf.EMAIL_FROM
+    _to = conf.EMAIL_TO
     _body = None
 
     def __init__(self, body):

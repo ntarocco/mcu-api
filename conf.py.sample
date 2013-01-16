@@ -1,6 +1,9 @@
 # Configuration file
 
 EMAIL_ENABLED = False
+EMAIL_HOST = "cernmx.cern.ch"
+EMAIL_FROM = "service-avc-operation@cern.ch"
+EMAIL_TO = ["service-avc-operation@cern.ch"]
 
 # Params to access API
 
