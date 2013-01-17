@@ -37,7 +37,7 @@ def request(methodName, params):
     # need to remove username and password from the request before sending out the email, so regenerate the xml request
     xmlrequest = xmlrpclib.dumps(tuple([params.items()]), methodName)
 
-    email_body = """
+    email_body += """
     Request:\n%s\n\n
     Response:\n%s\n\n""" % (xmlrequest, response)
 
