@@ -26,20 +26,17 @@ def request(methodName, params):
 
         return xmlrpclib.loads(response)
     except xmlrpclib.Fault as err:
-        email_body = """
-        XMLRPC request FAILED using Codian MSE API.\n\n
-        Error message: %s\n\n""" % (err)
+        email_body = "XMLRPC request FAILED using Codian MSE API.\n\n"
+        email_body += "Error message: %s\n\n" % err
     except Exception as err:
-        email_body = """
-        XMLRPC exception using Codian MSE API.\n\n
-        Error message: %s\n\n""" % (err)
+        email_body = "XMLRPC exception using Codian MSE API.\n\n"
+        email_body += "Error message: %s\n\n" % err
 
     # need to remove username and password from the request before sending out the email, so regenerate the xml request
     xmlrequest = xmlrpclib.dumps(tuple([params.items()]), methodName)
 
-    email_body += """
-    Request:\n%s\n\n
-    Response:\n%s\n\n""" % (xmlrequest, response)
+    email_body += "Request:\n%s\n\n" % xmlrequest
+    email_body += "Response:\n%s\n\n" % response
 
     m = ErrorMail(email_body)
     m.send()
@@ -83,10 +80,9 @@ def participantConnect(participantName, participantSettings):
     if response:
         response = response[0][0]
         if response['status'] != "operation successful":
-            email_body = """
-            Error trying to connect one participant: \n\n
-            Participant: %s\n\n
-            Params: %s\n\n""" % (participantName, params)
+            email_body = "Error trying to connect one participant: \n\n"
+            email_body += "Participant: %s\n\n" % participantName
+            email_body += "Params: %s\n\n" % params
 
             m = ErrorMail(email_body)
             m.send()
@@ -120,10 +116,9 @@ def restoreLayout(participantName, participantSettings):
     response = request('conference.paneplacement.modify', params)
 
     if not response:
-        email_body = """
-        Error trying to restore the layout of the pane placement: \n\n
-        Participant: %s\n\n
-        Params: %s\n\n""" % (participantName, params)
+        email_body = "Error trying to restore the layout of the pane placement: \n\n"
+        email_body += "Participant: %s\n\n" % participantName
+        email_body += "Params: %s\n\n" % params
 
         m = ErrorMail(email_body)
         m.send()
@@ -142,10 +137,9 @@ if __name__ == '__main__':
                 participantConnect(name, settings)
 
     else:
-        email_body = """
-        The conference %s is not active or not locked: \n\n
-        Active: %s\n\n
-        Locked: %s\n\n""" % (conf.CONFERENCE_NAME, status['conferenceActive'], status['locked'])
+        email_body = "The conference %s is not active or not locked: \n\n" % conf.CONFERENCE_NAME
+        email_body += "Active: %s\n\n" % status['conferenceActive']
+        email_body += "Locked: %s\n\n" % status['locked']
 
         m = ErrorMail(email_body)
         m.send()
