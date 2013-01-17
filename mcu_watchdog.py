@@ -8,6 +8,8 @@ from mail_handler import ErrorMail
 
 # create a xmlrpc request adding auth params and return the response
 def request(methodName, params):
+    xmlrequest = None
+    response = None
     try:
         # add authentication params to the request
         params = dict(params.items() + conf.API_AUTH.items())
