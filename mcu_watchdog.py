@@ -57,6 +57,22 @@ def getConferenceStatus():
             'locked': response['locked'],
             }
 
+# lock the conference
+def lockConference():
+    params = {
+        'conferenceName': conf.CONFERENCE_NAME,
+        'locked': True
+    }
+    response = request('conference.modify', params)
+
+    if response:
+        response = response[0][0]
+        if response['status'] != "operation successful":
+            email_body = "Error trying to lock the conference: %s\n\n" % conf.CONFERENCE_NAME
+
+            m = ErrorMail(email_body)
+            m.send()
+
 # return if the participant is connected to the conference or not
 def isParticipantConnected(participantName):
     params = {
@@ -129,17 +145,20 @@ if __name__ == '__main__':
 
     # check if the console is active
     status = getConferenceStatus()
-    if status['conferenceActive'] and status['locked']:
+    if status['conferenceActive']:
+
+        if not status['locked']:
+            lockConference()
 
         # for each participants, check if it is connected
         for name, settings in conf.PARTICIPANTS_TO_BE_CONNECTED.items():
             if not isParticipantConnected(name):
                 participantConnect(name, settings)
+                time.sleep(5)
 
     else:
-        email_body = "The conference %s is not active or not locked: \n\n" % conf.CONFERENCE_NAME
+        email_body = "The conference %s is not active: \n\n" % conf.CONFERENCE_NAME
         email_body += "Active: %s\n\n" % status['conferenceActive']
-        email_body += "Locked: %s\n\n" % status['locked']
 
         m = ErrorMail(email_body)
         m.send()
