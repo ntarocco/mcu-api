@@ -4,6 +4,7 @@ EMAIL_ENABLED = False
 EMAIL_HOST = "cernmx.cern.ch"
 EMAIL_FROM = "service-avc-operation@cern.ch"
 EMAIL_TO = ["service-avc-operation@cern.ch"]
+EMAIL_FREQUENCY = 60 # minutes
 
 # Params to access API
 

@@ -1,10 +1,49 @@
 import sys
+import os
 import httplib
 import xmlrpclib
+from datetime import datetime, timedelta
 import time
 
 import conf
 from mail_handler import ErrorMail
+
+# send email only every hour to avoid email-bombing
+def sendEmail(email_body):
+
+    if not os.path.exists('temp'):
+        os.mkdir('temp')
+
+    last_sent = None
+    send_email = False
+    filepath = os.path.join('temp', 'last_email_sent.txt')
+    now = datetime.now()
+
+    try:
+        # save locally in a file last time email was sent
+        if os.path.exists(filepath):
+            # read the configuration
+            fp = open(filepath)
+            date_read = fp.readline()
+            print date_read
+            last_sent = datetime.strptime(date_read, '%Y-%m-%d %H:%M:%S')
+            fp.close()
+
+        if not last_sent or (now - last_sent) > timedelta(minutes=conf.EMAIL_FREQUENCY):
+            # time expired, send email
+            send_email = True
+
+    except Exception as err:
+        email_body += "\n\nOTHER ERRORS:\nImpossible to check last sent error email.\n%s\n\n" % err
+        send_email = True
+
+    if send_email:
+        m = ErrorMail(email_body)
+        m.send()
+
+        fp = open(filepath, 'w')
+        fp.write(now.strftime('%Y-%m-%d %H:%M:%S'))
+        fp.close()
 
 # create a xmlrpc request adding auth params and return the response
 def request(methodName, params):
@@ -38,8 +77,7 @@ def request(methodName, params):
     email_body += "Request:\n%s\n\n" % xmlrequest
     email_body += "Response:\n%s\n\n" % response
 
-    m = ErrorMail(email_body)
-    m.send()
+    sendEmail(email_body)
 
     sys.exit(1)
 
@@ -70,8 +108,7 @@ def lockConference():
         if response['status'] != "operation successful":
             email_body = "Error trying to lock the conference: %s\n\n" % conf.CONFERENCE_NAME
 
-            m = ErrorMail(email_body)
-            m.send()
+            sendEmail(email_body)
 
 # return if the participant is connected to the conference or not
 def isParticipantConnected(participantName):
@@ -100,8 +137,7 @@ def participantConnect(participantName, participantSettings):
             email_body += "Participant: %s\n\n" % participantName
             email_body += "Params: %s\n\n" % params
 
-            m = ErrorMail(email_body)
-            m.send()
+            sendEmail(email_body)
         else:
             restoreLayout(participantName, participantSettings)
 
@@ -136,8 +172,7 @@ def restoreLayout(participantName, participantSettings):
         email_body += "Participant: %s\n\n" % participantName
         email_body += "Params: %s\n\n" % params
 
-        m = ErrorMail(email_body)
-        m.send()
+        sendEmail(email_body)
 
 
 if __name__ == '__main__':
@@ -160,6 +195,4 @@ if __name__ == '__main__':
         email_body = "The conference %s is not active: \n\n" % conf.CONFERENCE_NAME
         email_body += "Active: %s\n\n" % status['conferenceActive']
 
-        m = ErrorMail(email_body)
-        m.send()
-
+        sendEmail(email_body)
