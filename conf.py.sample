@@ -1,49 +1,44 @@
-# Configuration file
+import os
+import logging
 
-EMAIL_ENABLED = False
-EMAIL_HOST = "cernmx.cern.ch"
-EMAIL_FROM = "service-avc-operation@cern.ch"
-EMAIL_TO = ["service-avc-operation@cern.ch"]
-EMAIL_FREQUENCY = 60 # minutes
+# API Configuration
 
-# Params to access API
+MCU_API_HOSTNAME = 'mcu.mydomain.com'
+MCU_API_URL = '/RPC2'
+MCU_API_USERNAME = 'username'
+MCU_API_PSW = 'password'
+MCU_API_VERSION = '2.8' # Only 2.8 implemented
 
-API_URL = {
-    'hostname': 'cern-mcu1.cern.ch',
-    'url': '/RPC2',
-}
+# LOGGING
 
-API_AUTH = {
-    'authenticationUser': 'username',
-    'authenticationPassword': 'psw'
-}
+LOG_FILEPATH = os.path.join('logs', 'mcu.log')
+LOG_ERROR_FILEPATH = os.path.join('logs', 'error.log')
+LOG_LEVEL = logging.DEBUG
 
-CONFERENCE_NAME = "CMS Centres Worldwide"
+LOG_EMAIL = False
+LOG_MAIL_HOSTNAME = "mail.server.com"
+LOG_MAIL_FROM = "mail_from@mydomain.com"
+LOG_MAIL_TO = ["mail_to@mydomain.com"]
 
-PARTICIPANTS_TO_BE_CONNECTED = {
-    'p5': {
-        'displayName': 'CMS Control Room P5',
-        'address': '137.138.249.243',
-        'index': '1'
-    },
-    'meyrin': {
-        'displayName': 'CMS Centre Meyrin',
-        'address': '137.138.72.252',
-        'index': '2'
-    },
-    'fnal': {
-        'displayName': 'LHC@FNAL',
-        'address': '131.225.92.33',
-        'index': '3'
-    },
-    'desy': {
-        'displayName': 'CMS Centre desy',
-        'address': '131.169.118.76',
-        'index': '5'
-    },
-    'shifters': {
-        'displayName': 'CMS CSP Shifters',
-        'address': '361209*200468@137.138.248.228',
-        'index': '6'
+# Conferences to be controlled and restored
+
+WATCHDOG_CONFERENCES = [
+    {
+        "name": "Conf 1 Name",
+        "locked": True,
+        "participants": [
+            {
+                "name": "shortname1",
+                "display_name": "Nice name 1",
+                "address": "xxx.xxxx.xxxx.xxx",
+                "layout_index": "1"
+            },
+            {
+                "name": "shortname2",
+                "displayName": "Nice name 2",
+                "address": "xxx.xxxx.xxxx.xxx",
+                "layout_index": "2"
+            }
+        ]
     }
-}
+]

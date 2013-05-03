@@ -1,4 +1,6 @@
+from datetime import datetime
 import logging
+import os
 
 import conf
 
@@ -25,41 +27,31 @@ if conf.LOG_EMAIL:
     mail_handler = logging.SMTPHandler(conf.LOG_MAIL_HOSTNAME, conf.LOG_MAIL_FROM, conf.LOG_MAIL_TO, "[MCU] Error")
     mail_handler.setLevel(logging.ERROR)
     mail_handler.setFormatter(formatter_error)
+    logger.addFilter(ErrorEmailFilter())
     logger.addHandler(mail_handler)
 
-        # send email only every hour to avoid email-bombing
-def sendEmail(email_body):
+################################################################################
+# EMAIL Filter
+# To avoid email spam, sent error email 1 per hour (to warn the administrator, who can check and fix the problem)
 
-    if not os.path.exists('temp'):
-        os.mkdir('temp')
+class ErrorEmailFilter(logging.Filter):
+    def filter(self, record):
+        # check if the level is error
+        if record.level == logging.ERROR:
+            last_sent = None
+            send_email = False
+            filepath = os.path.join('temp', 'last_email_sent.txt')
+            now = datetime.now()
 
-    last_sent = None
-    send_email = False
-    filepath = os.path.join('temp', 'last_email_sent.txt')
-    now = datetime.now()
+            # save locally in a file last time email was sent
+            if os.path.exists(filepath):
+                # read the configuration
+                fp = open(filepath)
+                date_read = fp.readline()
+                last_sent = datetime.strptime(date_read, '%Y-%m-%d %H:%M:%S')
+                fp.close()
 
-    try:
-        # save locally in a file last time email was sent
-        if os.path.exists(filepath):
-            # read the configuration
-            fp = open(filepath)
-            date_read = fp.readline()
-            print date_read
-            last_sent = datetime.strptime(date_read, '%Y-%m-%d %H:%M:%S')
-            fp.close()
+            # if time expired, send error email
+            return not last_sent or (now - last_sent) > timedelta(minutes=conf.LOG_EMAIL_FREQUENCY):
 
-        if not last_sent or (now - last_sent) > timedelta(minutes=conf.LOG_EMAIL_FREQUENCY):
-            # time expired, send email
-            send_email = True
-
-    except Exception as err:
-        email_body += "\n\nOTHER ERRORS:\nImpossible to check last sent error email.\n%s\n\n" % err
-        send_email = True
-
-    if send_email:
-        m = ErrorMail(email_body)
-        m.send()
-
-        fp = open(filepath, 'w')
-        fp.write(now.strftime('%Y-%m-%d %H:%M:%S'))
-        fp.close()
+        return True
