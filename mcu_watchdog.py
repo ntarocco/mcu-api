@@ -1,198 +1,125 @@
-import sys
+#
+# MCU watchdog
+# This sript checks if the conferences set in the conf file have all the participants connected
+# and with video ok (not frozen). In case of problem, it disconnect an re-connect the client.
+# This script should be run every few minutes by a cron job.
+# It uses the 'temp' local folder to save temporary plate.
+#
+
+import json
+from logger import logger
 import os
-import httplib
-import xmlrpclib
-from datetime import datetime, timedelta
+import sys
 import time
 
 import conf
-from mail_handler import ErrorMail
+from api import API
 
-# send email only every hour to avoid email-bombing
-def sendEmail(email_body):
+def get_video_packets(conference_name, participant_name):
+    """
+        Read the local temporary file (if present) to return the video packets
+        received for the participant at the previous execution.
+        If the file does not exists, return 0.
+    """
+    file_path = os.path.join('temp', 'tracked_video_packets.temp')
+    if os.path.exists(file_path):
+        fp = open(file_path)
+        d = json.load(fp)
+        fp.close()
 
+        if conference_name in d and participant_name in d[conference_name]:
+            return long(d[conference_name][participant_name])
+
+    return 0
+
+def set_video_packets(conference_name, participant_name, video_packets):
+    """
+        Save the current video packets for a participant.
+    """
+    # open the file
+    file_path = os.path.join('temp', 'tracked_video_packets.temp')
+    if os.path.exists(file_path):
+        fp = open(file_path)
+        d = json.load(fp)
+        fp.close()
+    else:
+        d = dict()
+
+    if conference_name in d:
+        d[conference_name][participant_name] = video_packets
+    else:
+        d[conference_name] = {
+            participant_name: video_packets
+        }
+    logger.debug("Writing new video packets dict: %s" % d)
+
+    fp = open(file_path, 'w')
+    json.dump(d, fp, sort_keys=True, indent=4, separators=(',', ': '))
+    fp.close()
+
+def _connect_participant(participant):
+    """
+        Connect a participant to the current conference.
+    """
+    logger.info("Participant %s not connected. Connecting..." % participant['name'])
+    api.participant_connect(participant['name'])
+    # sleep to give time to MCU to connect the participant
+    time.sleep(5)
+    # restore the layout of this participant in the conference
+    logger.info("Restoring layout of participant %s with index %s" % (participant['name'], participant['layout_index']))
+    api.restore_layout(participant['name'], participant['layout_index'])
+
+####################################################################################
+
+if __name__ == '__main__':
+
+    # check if logs and temp folder exit
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
     if not os.path.exists('temp'):
         os.mkdir('temp')
 
-    last_sent = None
-    send_email = False
-    filepath = os.path.join('temp', 'last_email_sent.txt')
-    now = datetime.now()
-
     try:
-        # save locally in a file last time email was sent
-        if os.path.exists(filepath):
-            # read the configuration
-            fp = open(filepath)
-            date_read = fp.readline()
-            print date_read
-            last_sent = datetime.strptime(date_read, '%Y-%m-%d %H:%M:%S')
-            fp.close()
+        # check if the conferences in conf are running correctly
+        for conference in conf.WATCHDOG_CONFERENCES:
+            # get the API instance
+            api = API.get_instance(conference['name'])
+            # check if the conference is active
+            status = api.get_conference_status()
 
-        if not last_sent or (now - last_sent) > timedelta(minutes=conf.EMAIL_FREQUENCY):
-            # time expired, send email
-            send_email = True
+            if status['conferenceActive']:
 
+                # lock the conference
+                if not status['locked'] and conference['locked']:
+                    api.lock_conference(conference['name'])
+
+                # for each participants, check if it is connected
+                for participant in conference['participants']:
+                    details = api.get_participant_status(participant['name'])
+                    if details['callState'] != "connected":
+                        # participant is not connected, connected it
+                        _connect_participant(participant)
+                        # re-get the status of the participant
+                        details = api.get_participant_status(participant['name'])
+                    else:
+                        # connect but get video packets from previous execution to see if video is frozen
+                        previous_packets = get_video_packets(conference['name'], participant['name'])
+                        # check if video is frozen comparing the number of current received packets with the previous execution
+                        if long(details['videoRxReceived']) <= previous_packets:
+                            # it looks like everything is frozen here
+                            logger.error("It looks like the participant '%s' in the conference '%s' is frozen. It will be now disconnected and re-connected" % (participant['name'], conference['name']))
+                            # disconnect the participant
+                            api.participant_disconnect(participant['name'])
+                            time.sleep(5)
+                            # re-connect
+                            _connect_participant(participant)
+                            # re-get the status of the participant
+                            details = api.get_participant_status(participant['name'])
+
+                    # save current video packets
+                    set_video_packets(conference['name'], participant['name'], details['videoRxReceived'])
+
+            else:
+                logger.error("The conference %s is not connected" % conference['name'])
     except Exception as err:
-        email_body += "\n\nOTHER ERRORS:\nImpossible to check last sent error email.\n%s\n\n" % err
-        send_email = True
-
-    if send_email:
-        m = ErrorMail(email_body)
-        m.send()
-
-        fp = open(filepath, 'w')
-        fp.write(now.strftime('%Y-%m-%d %H:%M:%S'))
-        fp.close()
-
-# create a xmlrpc request adding auth params and return the response
-def request(methodName, params):
-    xmlrequest = None
-    response = None
-    try:
-        # add authentication params to the request
-        params = dict(params.items() + conf.API_AUTH.items())
-        xmlrequest = xmlrpclib.dumps(tuple([params]), methodName)
-
-        conn = httplib.HTTPSConnection(conf.API_URL['hostname'])
-        headers = { "Content-type": "text/xml", "charset": "utf-8", "Content-Length": "%d" % len(xmlrequest) }
-        conn.request("POST", conf.API_URL['url'], headers=headers)
-        conn.send(xmlrequest)
-        response = conn.getresponse()
-        response = response.read()
-        #print response.status, response.reason
-        conn.close()
-
-        return xmlrpclib.loads(response)
-    except xmlrpclib.Fault as err:
-        email_body = "XMLRPC request FAILED using Codian MSE API.\n\n"
-        email_body += "Error message: %s\n\n" % err
-    except Exception as err:
-        email_body = "XMLRPC exception using Codian MSE API.\n\n"
-        email_body += "Error message: %s\n\n" % err
-
-    # need to remove username and password from the request before sending out the email, so regenerate the xml request
-    xmlrequest = xmlrpclib.dumps(tuple([params.items()]), methodName)
-
-    email_body += "Request:\n%s\n\n" % xmlrequest
-    email_body += "Response:\n%s\n\n" % response
-
-    sendEmail(email_body)
-
-    sys.exit(1)
-
-# return if the conference is active or not
-def getConferenceStatus():
-    params = {
-        'conferenceName': conf.CONFERENCE_NAME
-    }
-    response = request('conference.status', params)
-
-    if response:
-        response = response[0][0]
-        return {
-            'conferenceActive': response['conferenceActive'],
-            'locked': response['locked'],
-            }
-
-# lock the conference
-def lockConference():
-    params = {
-        'conferenceName': conf.CONFERENCE_NAME,
-        'locked': True
-    }
-    response = request('conference.modify', params)
-
-    if response:
-        response = response[0][0]
-        if response['status'] != "operation successful":
-            email_body = "Error trying to lock the conference: %s\n\n" % conf.CONFERENCE_NAME
-
-            sendEmail(email_body)
-
-# return if the participant is connected to the conference or not
-def isParticipantConnected(participantName):
-    params = {
-        'conferenceName': conf.CONFERENCE_NAME,
-        'participantName': participantName
-    }
-    response = request('participant.status', params)
-
-    if response:
-        response = response[0][0]
-        return response['callState'] == "connected"
-
-# try to connect a participant
-def participantConnect(participantName, participantSettings):
-    params = {
-        'conferenceName': conf.CONFERENCE_NAME,
-        'participantName': participantName
-    }
-    response = request('participant.connect', params)
-
-    if response:
-        response = response[0][0]
-        if response['status'] != "operation successful":
-            email_body = "Error trying to connect one participant: \n\n"
-            email_body += "Participant: %s\n\n" % participantName
-            email_body += "Params: %s\n\n" % params
-
-            sendEmail(email_body)
-        else:
-            restoreLayout(participantName, participantSettings)
-
-# try to disconnect a participant
-def participantDisconnect(participantName, participantSettings):
-    params = {
-        'conferenceName': conf.CONFERENCE_NAME,
-        'participantName': participantName
-    }
-    response = request('participant.disconnect', params)
-
-    if response:
-        response = response[0][0]
-        if response['status'] != "operation successful":
-            print "Error, disconnection failed"
-
-# change back the pane placement layout
-def restoreLayout(participantName, participantSettings):
-
-    params = {
-        'conferenceName': conf.CONFERENCE_NAME,
-        'panes': [{
-            'index': participantSettings['index'],
-            'type': 'participant',
-            'participantName': participantName
-        }]
-    }
-    response = request('conference.paneplacement.modify', params)
-
-    if not response:
-        email_body = "Error trying to restore the layout of the pane placement: \n\n"
-        email_body += "Participant: %s\n\n" % participantName
-        email_body += "Params: %s\n\n" % params
-
-        sendEmail(email_body)
-
-
-if __name__ == '__main__':
-    # script run from the console
-
-    # check if the console is active
-    status = getConferenceStatus()
-    if status['conferenceActive']:
-
-        if not status['locked']:
-            lockConference()
-
-        # for each participants, check if it is connected
-        for name, settings in conf.PARTICIPANTS_TO_BE_CONNECTED.items():
-            if not isParticipantConnected(name):
-                participantConnect(name, settings)
-                time.sleep(5)
-
-    else:
-        email_body = "The conference %s is not active: \n\n" % conf.CONFERENCE_NAME
-        email_body += "Active: %s\n\n" % status['conferenceActive']
-
-        sendEmail(email_body)
+        logger.error("Exception occurred: %s" % err)
