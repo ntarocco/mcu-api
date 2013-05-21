@@ -1,7 +1,7 @@
 #
 # MCU watchdog
 # This sript checks if the conferences set in the conf file have all the participants connected
-# and with video ok (not frozen). In case of problem, it disconnect an re-connect the client.
+# and with video ok (not frozen).
 # This script should be run every few minutes by a cron job.
 # It uses the 'temp' local folder to save temporary plate.
 #
@@ -9,35 +9,36 @@
 import json
 from logger import logger
 import os
-import sys
 import time
 
 import conf
 from api import API
 
-def get_video_packets(conference_name, participant_name):
+
+def get_av_packets(conference_name, participant_name):
     """
-        Read the local temporary file (if present) to return the video packets
+        Read the local temporary file (if present) to return the av packets
         received for the participant at the previous execution.
         If the file does not exists, return 0.
     """
-    file_path = os.path.join('temp', 'tracked_video_packets.temp')
+    file_path = os.path.join('temp', 'tracked_av_packets.temp')
     if os.path.exists(file_path):
         fp = open(file_path)
         d = json.load(fp)
         fp.close()
 
         if conference_name in d and participant_name in d[conference_name]:
-            return long(d[conference_name][participant_name])
+            return long(d[conference_name][participant_name]['audio']), long(d[conference_name][participant_name]['video'])
 
-    return 0
+    return 0, 0
 
-def set_video_packets(conference_name, participant_name, video_packets):
+
+def set_av_packets(conference_name, participant_name, audio_packets, video_packets):
     """
-        Save the current video packets for a participant.
+        Save the current audio and video packets for a participant.
     """
     # open the file
-    file_path = os.path.join('temp', 'tracked_video_packets.temp')
+    file_path = os.path.join('temp', 'tracked_av_packets.temp')
     if os.path.exists(file_path):
         fp = open(file_path)
         d = json.load(fp)
@@ -46,16 +47,28 @@ def set_video_packets(conference_name, participant_name, video_packets):
         d = dict()
 
     if conference_name in d:
-        d[conference_name][participant_name] = video_packets
+        if participant_name in d[conference_name]:
+            d[conference_name][participant_name]['audio'] = audio_packets
+            d[conference_name][participant_name]['video'] = video_packets
+        else:
+            d[conference_name][participant_name] = {
+                'audio': audio_packets,
+                'video': video_packets
+            }
     else:
-        d[conference_name] = {
-            participant_name: video_packets
+        p = dict()
+        p[participant_name] = {
+            'audio': audio_packets,
+            'video': video_packets
         }
-    logger.debug("Writing new video packets dict: %s" % d)
+        d[conference_name] = p
+
+    logger.debug("Writing new av packets dict: %s" % d)
 
     fp = open(file_path, 'w')
     json.dump(d, fp, sort_keys=True, indent=4, separators=(',', ': '))
     fp.close()
+
 
 def _connect_participant(participant):
     """
@@ -99,13 +112,12 @@ if __name__ == '__main__':
                     if details['callState'] != "connected":
                         # participant is not connected, connected it
                         _connect_participant(participant)
-                        # re-get the status of the participant
-                        details = api.get_participant_status(participant['name'])
                     else:
-                        # connect but get video packets from previous execution to see if video is frozen
-                        previous_packets = get_video_packets(conference['name'], participant['name'])
-                        # check if video is frozen comparing the number of current received packets with the previous execution
-                        if long(details['videoRxReceived']) <= previous_packets:
+                        # connect but get A/V packets from previous execution to see if participant is frozen
+                        previous_audio_packets, previous_video_packets = get_av_packets(conference['name'], participant['name'])
+                        logger.debug("Conference: %s - Participant: %s - Previous packets A/V: %s | %s - Current packets A/V: %s | %s" % (conference['name'], participant['name'], previous_audio_packets, previous_video_packets, details['audioRxReceived'], details['videoRxReceived']))
+                        # check if audio and video are frozen comparing the number of current received packets with the previous execution
+                        if long(details['audioRxReceived']) <= previous_audio_packets and long(details['videoRxReceived']) <= previous_video_packets:
                             # it looks like everything is frozen here
                             logger.error("It looks like the participant '%s' in the conference '%s' is frozen. It will be now disconnected and re-connected" % (participant['name'], conference['name']))
                             # disconnect the participant
@@ -113,11 +125,12 @@ if __name__ == '__main__':
                             time.sleep(5)
                             # re-connect
                             _connect_participant(participant)
-                            # re-get the status of the participant
-                            details = api.get_participant_status(participant['name'])
+
+                    # re-get the status of the participant
+                    details = api.get_participant_status(participant['name'])
 
                     # save current video packets
-                    set_video_packets(conference['name'], participant['name'], details['videoRxReceived'])
+                    set_av_packets(conference['name'], participant['name'], details['audioRxReceived'], details['videoRxReceived'])
 
             else:
                 logger.error("The conference %s is not connected" % conference['name'])

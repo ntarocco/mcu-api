@@ -2,14 +2,16 @@ import os
 import logging
 
 # API Configuration
+#
 
 MCU_API_HOSTNAME = 'mcu.mydomain.com'
 MCU_API_URL = '/RPC2'
 MCU_API_USERNAME = 'username'
 MCU_API_PSW = 'password'
-MCU_API_VERSION = '2.8' # Only 2.8 implemented
+MCU_API_VERSION = '2.8'  # Only 2.8 implemented
 
 # LOGGING
+#
 
 LOG_FILEPATH = os.path.join('logs', 'mcu.log')
 LOG_ERROR_FILEPATH = os.path.join('logs', 'error.log')
@@ -19,6 +21,7 @@ LOG_EMAIL = False
 LOG_MAIL_HOSTNAME = "mail.server.com"
 LOG_MAIL_FROM = "mail_from@mydomain.com"
 LOG_MAIL_TO = ["mail_to@mydomain.com"]
+LOG_EMAIL_FREQUENCY = 60  # minutes
 
 # Conferences to be controlled and restored
 

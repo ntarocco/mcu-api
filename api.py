@@ -4,6 +4,7 @@ import xmlrpclib
 
 import conf
 
+
 class MCUConnector(object):
     """
         MCUConnector handles requests to Codian MCU API
@@ -33,7 +34,7 @@ class MCUConnector(object):
 
             conn = httplib.HTTPSConnection(conf.MCU_API_HOSTNAME)
             # add the correct headers
-            headers = { "Content-type": "text/xml", "charset": "utf-8", "Content-Length": "%d" % len(xmlrequest) }
+            headers = {"Content-type": "text/xml", "charset": "utf-8", "Content-Length": "%d" % len(xmlrequest)}
             # send the request to the API url
             conn.request("POST", conf.MCU_API_URL, headers=headers)
             conn.send(xmlrequest)
@@ -51,6 +52,7 @@ class MCUConnector(object):
         except Exception as err:
             logger.error("XMLRPC exception using Codian MSE API: %s" % err)
 
+
 class API_Common(object):
     """
         Common API between different versions of Codian MCU. When conference_name is set, it will be used
@@ -61,6 +63,7 @@ class API_Common(object):
     def __init__(self, conference_name=None):
         self._conn = MCUConnector()
         self._conference_name = conference_name
+
 
 class API_2_8(API_Common):
     """
@@ -74,7 +77,9 @@ class API_2_8(API_Common):
         """
             Get the status of a conference and return a dict with all the details.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name
         }
@@ -88,7 +93,9 @@ class API_2_8(API_Common):
         """
             Try to lock a conference.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'locked': True
@@ -104,7 +111,9 @@ class API_2_8(API_Common):
         """
             Return True or False if the paricipant is connected to the conference.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name
@@ -120,7 +129,9 @@ class API_2_8(API_Common):
         """
             Return all the details of a participant.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name
@@ -135,7 +146,9 @@ class API_2_8(API_Common):
         """
             Connect a participant (already added) to the confernece.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name
@@ -151,7 +164,9 @@ class API_2_8(API_Common):
         """
             Disconnect a participant from a conference.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name
@@ -167,7 +182,9 @@ class API_2_8(API_Common):
         """
             Restore the layout according to the index set in the configuration file.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'panes': [{
@@ -185,7 +202,9 @@ class API_2_8(API_Common):
         """
             Add a new participant to the conference.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name,
@@ -200,7 +219,9 @@ class API_2_8(API_Common):
         """
             Modify a participant already connected to the conference.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name,
@@ -215,13 +236,16 @@ class API_2_8(API_Common):
         """
             Remove a participant from the conference.
         """
-        if not conference_name: conference_name = self._conference_name
+        if not conference_name:
+            conference_name = self._conference_name
+
         params = {
             'conferenceName': conference_name,
             'participantName': participant_name
         }
         response = self._conn.request('participant.remove', params)
         return response
+
 
 class API():
     """
