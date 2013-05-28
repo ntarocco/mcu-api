@@ -1,6 +1,6 @@
 MCU API
-=======
-
+===
+## Description
 
 MCU API project implements the API for videoconference Codian MCU devices from `CISCO Tandberg <http://www.ivci.com/videoconferencing-tandberg-video-conferencing-network-infrastructure.html>`_ in Python.
 A smaller set of API is implemented for devices with software version 2.8, but you can find the full documentation for version
@@ -11,8 +11,7 @@ MCU API is a watchdog to monitor participants connected to conferences. It allow
 In case of any error, an email is sent to the senders set in the script configuration. To avoid e-mail spam, a logging filter is implemented to send emails every hour.
 
 
-INSTALL
-=======
+## Installation
 
 There are no external libraries to be installed. After cloning the repo, create your conf.py (from the conf.py.sample)
 and set your parameters.
@@ -20,8 +19,7 @@ The project folder has to be writable because the script will create two folders
 If you want to set-up the watchdog, create a cron job to be run every 1/5 mins.
 
 
-EXTEND
-======
+## Extend
 
 To extend the API, you can implement them in the api.py classes, inside Common class or creating a new class for a specific software version.
 Create then another module to call the new API implemented.
