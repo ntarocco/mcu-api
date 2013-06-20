@@ -135,4 +135,4 @@ if __name__ == '__main__':
             else:
                 logger.error("The conference %s is not connected" % conference['name'])
     except Exception as err:
-        logger.error("Exception occurred: %s" % err)
+        logger.exception("Exception occurred: %s" % err)

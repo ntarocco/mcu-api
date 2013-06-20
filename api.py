@@ -48,9 +48,9 @@ class MCUConnector(object):
             # convert xml response to dict
             return xmlrpclib.loads(response)
         except xmlrpclib.Fault as err:
-            logger.error("XMLRPC request FAILED using Codian MSE API: %s" % err)
+            logger.exception("XMLRPC request FAILED using Codian MSE API: %s" % err)
         except Exception as err:
-            logger.error("XMLRPC exception using Codian MSE API: %s" % err)
+            logger.exception("XMLRPC exception using Codian MSE API: %s" % err)
 
 
 class API_Common(object):
