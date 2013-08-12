@@ -2,7 +2,7 @@ MCU API
 ===
 ## Description
 
-MCU API project implements the API for videoconference Codian MCU devices from `CISCO Tandberg <http://www.ivci.com/videoconferencing-tandberg-video-conferencing-network-infrastructure.html>`_ in Python.
+MCU API project implements the API for videoconference Codian MCU devices from [CISCO Tandberg](http://www.ivci.com/videoconferencing-tandberg-video-conferencing-network-infrastructure.html) in Python.
 A smaller set of API is implemented for devices with software version 2.8, but you can find the full documentation for version
 2.8 and 2.9 under the docs folder.
 
