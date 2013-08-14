@@ -3,7 +3,7 @@ import logging
 import logging.handlers
 import os
 
-import conf
+from mcu_watchdog import conf
 
 ################################################################################
 # EMAIL Filter

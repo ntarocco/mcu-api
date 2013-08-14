@@ -2,7 +2,7 @@ from logger import logger
 import httplib
 import xmlrpclib
 
-import conf
+from mcu_watchdog import conf
 
 
 class MCUConnector(object):

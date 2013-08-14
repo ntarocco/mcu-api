@@ -7,12 +7,12 @@
 #
 
 import json
-from logger import logger
 import os
 import time
 
-import conf
-from api import API
+from mcu_watchdog import conf
+from mcu_watchdog.logger import logger
+from mcu_watchdog.api import API
 
 
 def get_av_packets(conference_name, participant_name):
