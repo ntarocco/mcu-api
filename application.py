@@ -150,7 +150,8 @@ if __name__ == '__main__':
                             details = api.get_participant_status(participant['name'])
 
                             # save current video packets
-                            set_av_packets(conference['name'], participant['name'], details['audioRxReceived'], details['videoRxReceived'])
+                            if "audioRxReceived" in details and "videoRxReceived" in details:
+                                set_av_packets(conference['name'], participant['name'], details['audioRxReceived'], details['videoRxReceived'])
 
             else:
                 logger.error("The conference %s is not connected" % conference['name'])
